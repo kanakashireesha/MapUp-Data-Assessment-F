@@ -13,8 +13,9 @@ def generate_car_matrix(df)->pd.DataFrame:
                           where 'id_1' and 'id_2' are used as indices and columns respectively.
     """
     # Write your logic here
-
-    return df
+    car_matrix = df.pivot_table(index='id_1', columns='id_2', values='car', fill_value=0)
+    np.fill_diagonal(car_matrix.values, 0)
+    return car_matrix
 
 
 def get_type_count(df)->dict:
@@ -29,7 +30,9 @@ def get_type_count(df)->dict:
     """
     # Write your logic here
 
-    return dict()
+    df['car_type'] = pd.cut(df['car'], bins=[-1, 15, 25, 100], labels=['low', 'medium', 'high'])
+    
+    return df['car_type'].value_counts().to_dict()
 
 
 def get_bus_indexes(df)->list:
@@ -44,7 +47,9 @@ def get_bus_indexes(df)->list:
     """
     # Write your logic here
 
-    return list()
+    mean_bus = df['bus'].mean()
+    bus_filtered = df[df['bus'] > 2 * mean_bus]
+    return bus_filtered.index.tolist()
 
 
 def filter_routes(df)->list:
@@ -59,7 +64,9 @@ def filter_routes(df)->list:
     """
     # Write your logic here
 
-    return list()
+    filtered_routes = df.groupby('route')['truck'].mean()
+    filtered_routes = filtered_routes[filtered_routes > 7]
+    return filtered_routes.index.to_list()
 
 
 def multiply_matrix(matrix)->pd.DataFrame:
@@ -74,7 +81,9 @@ def multiply_matrix(matrix)->pd.DataFrame:
     """
     # Write your logic here
 
-    return matrix
+    matrix.loc[matrix > 20] *= 0.75
+    matrix.loc[matrix <= 20] *= 1.25
+    return matrix.round(decimals=1)
 
 
 def time_check(df)->pd.Series:
@@ -89,4 +98,12 @@ def time_check(df)->pd.Series:
     """
     # Write your logic here
 
-    return pd.Series()
+    df['start_datetime'] = pd.to_datetime(df[['startDay', 'startTime']])
+    df['end_datetime'] = pd.to_datetime(df[['endDay', 'endTime']])
+
+    def check_time_range(row):
+        start_time = row['start_datetime'].time()
+        end_time = row['end_datetime'].time()
+        return start_time <= end_time <= (start_time + pd.Timedelta(days=1))
+
+    return df.groupby(['id', 'id_2'])['start_datetime'].apply(check_time_range)
